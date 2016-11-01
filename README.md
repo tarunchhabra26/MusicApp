@@ -1,2 +1,0 @@
-# MusicApp
-Contextual Music Applicatio
