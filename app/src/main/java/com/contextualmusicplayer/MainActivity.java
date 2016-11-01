@@ -6,8 +6,10 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Bundle;
-import android.support.v4.media.session.PlaybackStateCompat;
+import android.support.design.widget.FloatingActionButton;
 import android.util.Log;
+import android.view.View;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.spotify.sdk.android.authentication.AuthenticationClient;
@@ -16,6 +18,7 @@ import com.spotify.sdk.android.authentication.AuthenticationResponse;
 import com.spotify.sdk.android.player.Config;
 import com.spotify.sdk.android.player.ConnectionStateCallback;
 import com.spotify.sdk.android.player.Error;
+import com.spotify.sdk.android.player.Metadata;
 import com.spotify.sdk.android.player.PlaybackState;
 import com.spotify.sdk.android.player.Player;
 import com.spotify.sdk.android.player.PlayerEvent;
@@ -53,23 +56,25 @@ public class MainActivity extends Activity implements
 
     private Player mPlayer;
 
-    //private String mAccessToken;
-
     private SpotifyApi mSpotifyApi = null;
 
     private SpotifyService mSpotifyService = null;
 
     private List<SavedTrack> mDefaultTracks = null;
 
+    private boolean isPlaying = false;
+
+    private FloatingActionButton playPause = null;
+
     private final Player.OperationCallback mOperationCallback = new Player.OperationCallback() {
         @Override
         public void onSuccess() {
-            Log.d("Status :","OK!");
+            Log.d("Status :", "OK!");
         }
 
         @Override
         public void onError(Error error) {
-            Log.d("Status :","Error");
+            Log.d("Status :", "Error");
         }
     };
 
@@ -94,16 +99,87 @@ public class MainActivity extends Activity implements
 
     }
 
-    @Override public void onResume() {
+
+    @Override
+    public void onResume() {
         IntentFilter filter = new IntentFilter(Intent.ACTION_HEADSET_PLUG);
         registerReceiver(myReceiver, filter);
         super.onResume();
     }
 
-    @Override public void onPause() {
+    @Override
+    public void onPause() {
         IntentFilter filter = new IntentFilter(Intent.ACTION_HEADSET_PLUG);
         registerReceiver(myReceiver, filter);
         super.onPause();
+    }
+
+    @Override
+    public void onStart() {
+        super.onStart();
+        playPause = (FloatingActionButton) findViewById(R.id.fab);
+        playPause.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (isPlaying && mPlayer != null) {
+                    mPlayer.pause(mOperationCallback);
+                    playPause.setImageDrawable(getResources().
+                            getDrawable(android.R.drawable.ic_media_play,
+                                    MainActivity.this.getTheme()));
+                    isPlaying = false;
+                } else {
+                    PlaybackState playState = mPlayer.getPlaybackState();
+                    if (playState.isActiveDevice) {
+                        mPlayer.resume(mOperationCallback);
+                    } else {
+                        mSpotifyService.getMySavedTracks(new SpotifyCallback<Pager<SavedTrack>>() {
+                            @Override
+                            public void failure(SpotifyError spotifyError) {
+                                Log.d("Album failure", spotifyError.toString());
+                                mSpotifyService.getAlbum("0K4pIOOsfJ9lK8OjrZfXzd",
+                                        new Callback<Album>() {
+                                    @Override
+                                    public void success(Album album, Response response) {
+                                        Log.d("Album success", album.name);
+                                        Log.d("Album release date", album.release_date);
+                                        Log.d("Album type", album.type);
+
+                                        mPlayer.playUri(null,
+                                                "spotify:album:0K4pIOOsfJ9lK8OjrZfXzd",
+                                                0, 0);
+                                    }
+
+                                    @Override
+                                    public void failure(RetrofitError error) {
+                                        Log.d("Album failure", error.toString());
+                                    }
+                                });
+                            }
+
+                            @Override
+                            public void success(Pager<SavedTrack> savedTrackPager,
+                                                Response response) {
+                                List<SavedTrack> tracks = savedTrackPager.items;
+                                int range = (tracks.size() - 0);
+                                int random = (int) (Math.random() * range) + 0;
+                                Track currentTrack = tracks.get(random).track;
+                                String uri = currentTrack.uri;
+                                Log.d("Current track uri: ", uri);
+                                tracks.remove(random);
+                                mDefaultTracks = tracks;
+                                mPlayer.setShuffle(mOperationCallback, true);
+                                mPlayer.playUri(mOperationCallback,
+                                        "spotify:album:0K4pIOOsfJ9lK8OjrZfXzd", 0, 0);
+                            }
+                        });
+                    }
+                    playPause.setImageDrawable(getResources().
+                            getDrawable(android.R.drawable.ic_media_pause,
+                                    MainActivity.this.getTheme()));
+                    isPlaying = true;
+                }
+            }
+        });
     }
 
     @Override
@@ -114,7 +190,6 @@ public class MainActivity extends Activity implements
         if (requestCode == REQUEST_CODE) {
             AuthenticationResponse response = AuthenticationClient.getResponse(resultCode, intent);
             if (response.getType() == AuthenticationResponse.Type.TOKEN) {
-                //mAccessToken = response.getAccessToken();
 
                 // Setting access token to spotify service
                 mSpotifyApi.setAccessToken(response.getAccessToken());
@@ -142,6 +217,14 @@ public class MainActivity extends Activity implements
     }
 
     @Override
+    protected void onStop(){
+        super.onStop();
+        IntentFilter filter = new IntentFilter(Intent.ACTION_HEADSET_PLUG);
+        registerReceiver(myReceiver, filter);
+
+    }
+
+    @Override
     protected void onDestroy() {
         Spotify.destroyPlayer(this);
         unregisterReceiver(myReceiver);
@@ -153,14 +236,32 @@ public class MainActivity extends Activity implements
         Log.d("MainActivity", "Playback event received: " + playerEvent.name());
         switch (playerEvent) {
             // Handle event type as necessary
-           case kSpPlaybackNotifyPlay:
-               Toast.makeText(MainActivity.this,"Delivered",Toast.LENGTH_LONG).show();
-               SavedTrack track = mDefaultTracks.get(0);
-               mDefaultTracks.remove(0);
-               Log.d("Next track :" , track.track.name);
-               mPlayer.queue(mOperationCallback, track.track.uri);
+            case kSpPlaybackNotifyPlay:
+                Toast.makeText(MainActivity.this, "Music playing", Toast.LENGTH_LONG).show();
+                SavedTrack track = mDefaultTracks.get(0);
+                mDefaultTracks.remove(0);
+                Log.d("Next track :", track.track.name);
+                mPlayer.queue(mOperationCallback, track.track.uri);
+                isPlaying = true;
+                playPause.setImageDrawable(getResources().
+                        getDrawable(android.R.drawable.ic_media_pause,
+                                MainActivity.this.getTheme()));
+                Metadata data = mPlayer.getMetadata();
+                Metadata.Track currentTrack = data.currentTrack;
+                TextView songName = (TextView) findViewById(R.id.valSongName);
+                songName.setText(currentTrack.name);
+                TextView artist = (TextView) findViewById(R.id.valArtist);
+                artist.setText(currentTrack.artistName);
+                break;
+            case kSpPlaybackNotifyTrackChanged:
+                data = mPlayer.getMetadata();
+                currentTrack = data.currentTrack;
+                songName = (TextView) findViewById(R.id.valSongName);
+                songName.setText(currentTrack.name);
+                artist = (TextView) findViewById(R.id.valArtist);
+                artist.setText(currentTrack.artistName);
+                break;
 
-               break;
             default:
                 break;
         }
@@ -179,46 +280,6 @@ public class MainActivity extends Activity implements
     @Override
     public void onLoggedIn() {
         Log.d("MainActivity", "User logged in");
-        //mPlayer.playUri(null, "spotify:track:2TpxZ7JUBn3uw46aR7qd6V", 0, 0);
-
-       /* mSpotifyService.getMySavedTracks(new SpotifyCallback<Pager<SavedTrack>>() {
-            @Override
-            public void failure(SpotifyError spotifyError) {
-                Log.d("Album failure", spotifyError.toString());
-                mSpotifyService.getAlbum("2dIGnmEIy1WZIcZCFSj6i8", new Callback<Album>() {
-                    @Override
-                    public void success(Album album, Response response) {
-                        Log.d("Album success", album.name);
-                        Log.d("Album release date", album.release_date);
-                        Log.d("Album type", album.type);
-
-                        mPlayer.playUri(null, "spotify:album:2dIGnmEIy1WZIcZCFSj6i8", 0, 0);
-                    }
-
-                    @Override
-                    public void failure(RetrofitError error) {
-                        Log.d("Album failure", error.toString());
-                    }
-                });
-            }
-
-            @Override
-            public void success(Pager<SavedTrack> savedTrackPager, Response response) {
-                List<SavedTrack> tracks = savedTrackPager.items;
-                int range = (tracks.size() - 0);
-                int random = (int)(Math.random() * range) + 0;
-                Track currentTrack = tracks.get(random).track;
-                String uri = currentTrack.uri;
-                Log.d("Current track uri: ", uri);
-                tracks.remove(random);
-                mDefaultTracks = tracks;
-                mPlayer.setShuffle(mOperationCallback,true);
-                mPlayer.playUri(mOperationCallback,"spotify:album:2dIGnmEIy1WZIcZCFSj6i8",0,0);
-            }
-        });*/
-
-
-
 
     }
 
@@ -242,7 +303,8 @@ public class MainActivity extends Activity implements
         Log.d("MainActivity", "Received connection message: " + message);
     }
 
-    private class MusicIntentReceiver extends BroadcastReceiver{
+    private class MusicIntentReceiver extends BroadcastReceiver {
+        TextView valHPStatus = (TextView) findViewById(R.id.valHPStatus);
 
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -251,11 +313,17 @@ public class MainActivity extends Activity implements
                 switch (state) {
                     case 0:
                         Log.d("Context", "Headset is unplugged");
+                        valHPStatus.setText("Unplugged, please plugin to start");
                         if (mPlayer != null)
                             mPlayer.pause(mOperationCallback);
+                            playPause.setImageDrawable(getResources().
+                                getDrawable(android.R.drawable.ic_media_play,
+                                        MainActivity.this.getTheme()));
+                            isPlaying = false;
                         break;
                     case 1:
                         Log.d("Context", "Headset is plugged");
+                        valHPStatus.setText("Plugged");
                         if (mPlayer != null) {
                             PlaybackState pState = mPlayer.getPlaybackState();
                             if (pState.isActiveDevice)
@@ -265,14 +333,17 @@ public class MainActivity extends Activity implements
                                     @Override
                                     public void failure(SpotifyError spotifyError) {
                                         Log.d("Album failure", spotifyError.toString());
-                                        mSpotifyService.getAlbum("0K4pIOOsfJ9lK8OjrZfXzd", new Callback<Album>() {
+                                        mSpotifyService.getAlbum("0K4pIOOsfJ9lK8OjrZfXzd",
+                                                new Callback<Album>() {
                                             @Override
                                             public void success(Album album, Response response) {
                                                 Log.d("Album success", album.name);
                                                 Log.d("Album release date", album.release_date);
                                                 Log.d("Album type", album.type);
 
-                                                mPlayer.playUri(null, "spotify:album:0K4pIOOsfJ9lK8OjrZfXzd", 0, 0);
+                                                mPlayer.playUri(null,
+                                                        "spotify:album:0K4pIOOsfJ9lK8OjrZfXzd",
+                                                        0, 0);
                                             }
 
                                             @Override
@@ -283,7 +354,8 @@ public class MainActivity extends Activity implements
                                     }
 
                                     @Override
-                                    public void success(Pager<SavedTrack> savedTrackPager, Response response) {
+                                    public void success(Pager<SavedTrack> savedTrackPager,
+                                                        Response response) {
                                         List<SavedTrack> tracks = savedTrackPager.items;
                                         int range = (tracks.size() - 0);
                                         int random = (int) (Math.random() * range) + 0;
@@ -293,14 +365,20 @@ public class MainActivity extends Activity implements
                                         tracks.remove(random);
                                         mDefaultTracks = tracks;
                                         mPlayer.setShuffle(mOperationCallback, true);
-                                        mPlayer.playUri(mOperationCallback, "spotify:album:0K4pIOOsfJ9lK8OjrZfXzd", 0, 0);
+                                        mPlayer.playUri(mOperationCallback,
+                                                "spotify:album:0K4pIOOsfJ9lK8OjrZfXzd", 0, 0);
                                     }
                                 });
                             }
+                            playPause.setImageDrawable(getResources().
+                                    getDrawable(android.R.drawable.ic_media_pause,
+                                            MainActivity.this.getTheme()));
+                            isPlaying = true;
                         }
                         break;
                     default:
                         Log.d("Context", "I have no idea what the headset state is");
+                        valHPStatus.setText("Unknown");
                 }
             }
 

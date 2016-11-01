@@ -16,5 +16,58 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Hello World!" />
+        android:layout_alignTop="@+id/lbHPStatus"
+        android:layout_toEndOf="@+id/lbHPStatus"
+        android:layout_marginStart="33dp"
+        android:id="@+id/valHPStatus" />
+
+    <TextView
+        android:text="Headphones :"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="110dp"
+        android:id="@+id/lbHPStatus"
+        android:layout_alignParentTop="true"
+        android:layout_alignParentStart="true" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Welcome to Contexual Music Player"
+        android:layout_marginTop="50dp"
+        android:layout_alignParentStart="true"
+        android:layout_marginBottom="25dp"
+        tools:text="Contextual Music Player" />
+
+    <TextView
+        android:text="Song title : "
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/lbHPStatus"
+        android:layout_alignParentStart="true"
+        android:layout_marginTop="15dp"
+        android:id="@+id/lbSongName" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignTop="@+id/lbSongName"
+        android:layout_toEndOf="@+id/lbSongName"
+        android:id="@+id/valSongName" />
+
+    <TextView
+        android:text="Artist :"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/lbSongName"
+        android:layout_alignParentStart="true"
+        android:layout_marginTop="15dp"
+        android:id="@+id/lbArtist" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignTop="@+id/lbArtist"
+        android:layout_toEndOf="@+id/lbArtist"
+        android:id="@+id/valArtist" />
 </RelativeLayout>
