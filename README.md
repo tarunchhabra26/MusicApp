@@ -26,6 +26,13 @@ The application proposed to perform the following :
 
 ## How to run the program ##
 * Pre-requisite - Have a phone which is compatible with Android API level 23 or above(as per specification), Android Studio, Spotify premium account.
-* Launch the app in the phone using ADB
+* Launch the app in the phone using ADB.
 * At the very start the app will ask the user to login into spotify premium account to start streaming music.
 * Once done with that the app can start streaming after plugging headphone or using the toggle switch.
+* Basic integration with Google Awareness API.
+
+## Third party libraries used so far ##
+* Spotify authentication library - Helps to authenticate a user with spotify premium account access.
+* Spotify play library - Used for streaming and play controls.
+* Spotify Web API - Used for retrieving playlist and user's saved tracks or even searching music on spotify.
+* Google awareness API - For computing context.
