@@ -1,0 +1,126 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/container"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:layout_gravity="center"
+    android:background="#1b1b1b"
+    android:orientation="vertical"
+    android:paddingBottom="@dimen/activity_vertical_margin"
+    android:paddingLeft="@dimen/activity_horizontal_margin"
+    android:paddingRight="@dimen/activity_horizontal_margin"
+    android:paddingTop="@dimen/activity_vertical_margin" >
+
+    <TextView
+        android:id= "@+id/headPhoneStatus"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:paddingTop="40dp"
+        android:text="Headphones : Unplugged"
+        android:textColor="#ffffff"
+        android:contentDescription="Status of headphones" />
+
+    <TextView
+        android:id= "@+id/playList"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:padding="5dp"
+        android:text="Playlist : NA"
+        android:textColor="#ffffff"
+        android:contentDescription="Name of current playlist" />
+
+    <ImageView
+        android:id="@+id/mp3Image"
+        android:layout_width="200dp"
+        android:layout_height="200dp"
+        android:layout_gravity="center"
+        android:padding="5dp"
+        android:src="@android:drawable/ic_menu_report_image"
+        android:background="#1b1b1b"
+        android:adjustViewBounds="true"
+        android:layout_margin="30dp"/>
+
+    <TextView
+        android:id="@+id/songName"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:textColor="#ffffff"
+        android:text="Song Name(Album)" />
+
+    <TextView
+        android:id="@+id/songArtist"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:textColor="#ffffff"
+        android:text="Song Artist" />
+
+    <TextView
+        android:id="@+id/songDuration"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:padding="30dp"
+        android:layout_gravity="center"
+        android:textColor="#ffffff"
+        android:text="Song Duration" />
+
+    <SeekBar
+        android:id="@+id/seekBar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_marginTop="30dp"
+        android:gravity="center_horizontal"
+        android:orientation="horizontal"
+        android:weightSum="1">
+
+        <android.support.design.widget.FloatingActionButton
+            android:id="@+id/media_rewind"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="14dp"
+            android:onClick="rewind"
+            android:src="@android:drawable/ic_media_rew"
+            />
+        <android.support.design.widget.FloatingActionButton
+            android:id="@+id/media_prev"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="14dp"
+            android:onClick="previous"
+            android:src="@android:drawable/ic_media_previous"
+            />
+
+        <android.support.design.widget.FloatingActionButton
+            android:id="@+id/media_play"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="14dp"
+            android:src="@android:drawable/ic_media_play"
+             />
+        <android.support.design.widget.FloatingActionButton
+            android:id="@+id/media_next"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="14dp"
+            android:onClick="next"
+            android:src="@android:drawable/ic_media_next" />
+
+        <android.support.design.widget.FloatingActionButton
+            android:id="@+id/media_forward"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="14dp"
+            android:onClick="forward"
+            android:src="@android:drawable/ic_media_ff"
+            />
+        </LinearLayout>
+
+
+    </LinearLayout>
