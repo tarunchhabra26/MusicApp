@@ -1,10 +1,12 @@
 package com.contextualmusicplayer.com.contextualmusicplayer.model;
 
+import java.io.Serializable;
+
 /**
  * Created by tarunchhabra on 11/13/16.
  */
 
-public class Rule {
+public class Rule implements Serializable{
 
     private String ruleId;
     private String rulename;

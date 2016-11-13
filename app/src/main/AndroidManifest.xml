@@ -41,11 +41,11 @@
             android:name="com.spotify.sdk.android.authentication.LoginActivity"
             android:screenOrientation="portrait"
             android:theme="@android:style/Theme.Translucent.NoTitleBar" />
-        <activity android:name=".CreateRuleActivity"
-            android:screenOrientation="portrait">
-
-        </activity>
-
+        <activity
+            android:name=".CreateRuleActivity"
+            android:screenOrientation="portrait" />
+        <activity android:name=".ManageRuleActivity" />
+        <activity android:name=".ViewRule"></activity>
     </application>
 
 </manifest>

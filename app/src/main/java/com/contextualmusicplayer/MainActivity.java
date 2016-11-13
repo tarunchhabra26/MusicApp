@@ -694,6 +694,7 @@ public class MainActivity extends AppCompatActivity implements
 
         if (id == R.id.nav_rules) {
             // Handle the navigation to rules display
+            manageRuleIntent();
         } else if (id == R.id.nav_add_rule) {
             // Handle to create a new rule
             createRuleIntent();
@@ -703,6 +704,10 @@ public class MainActivity extends AppCompatActivity implements
         return true;
     }
 
+    public void manageRuleIntent(){
+        Intent intent = new Intent(this, ManageRuleActivity.class);
+        startActivity(intent);
+    }
     public void createRuleIntent(){
         Intent intent = new Intent(this, CreateRuleActivity.class);
         intent.putExtra("ACCESS_TOKEN",mAccessToken);
