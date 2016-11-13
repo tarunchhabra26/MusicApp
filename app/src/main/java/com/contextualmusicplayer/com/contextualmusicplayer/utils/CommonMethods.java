@@ -6,6 +6,7 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.widget.Toast;
 
+import com.google.android.gms.awareness.fence.DetectedActivityFence;
 import com.google.android.gms.awareness.state.Weather;
 
 /**
@@ -79,5 +80,28 @@ public class CommonMethods {
                 break;
         }
         return condition;
+    }
+
+    public int getActivityID(String activityName){
+        int result = 4;
+        switch (activityName.toLowerCase()){
+            case "in vehicle": result = DetectedActivityFence.IN_VEHICLE;
+                break;
+            case "on bicycle": result = DetectedActivityFence.ON_BICYCLE;
+                break;
+            case "on foot": result = DetectedActivityFence.ON_BICYCLE;
+                break;
+            case "running": result = DetectedActivityFence.RUNNING;
+                break;
+            case "still": result = DetectedActivityFence.STILL;
+                break;
+            case "tilting": result = DetectedActivityFence.TILTING;
+                break;
+            case "walking": result = DetectedActivityFence.WALKING;
+                break;
+            default: result = DetectedActivityFence.UNKNOWN;
+                break;
+        }
+        return result;
     }
 }

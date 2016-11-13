@@ -133,6 +133,8 @@ public class MainActivity extends AppCompatActivity implements
 
     private Context mCurrent;
 
+    private String mAccessToken;
+
     private CommonMethods mCommon;
 
     private Handler durationHandler = new Handler();
@@ -518,6 +520,7 @@ public class MainActivity extends AppCompatActivity implements
             if (response.getType() == AuthenticationResponse.Type.TOKEN) {
 
                 // Setting access token to spotify service
+                mAccessToken = response.getAccessToken();
                 mSpotifyApi.setAccessToken(response.getAccessToken());
 
                 // Setting SpotifyService instance
@@ -690,13 +693,20 @@ public class MainActivity extends AppCompatActivity implements
         int id = item.getItemId();
 
         if (id == R.id.nav_rules) {
-            // Handle the camera action
+            // Handle the navigation to rules display
         } else if (id == R.id.nav_add_rule) {
-
+            // Handle to create a new rule
+            createRuleIntent();
         }
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
         drawer.closeDrawer(GravityCompat.START);
         return true;
+    }
+
+    public void createRuleIntent(){
+        Intent intent = new Intent(this, CreateRuleActivity.class);
+        intent.putExtra("ACCESS_TOKEN",mAccessToken);
+        startActivity(intent);
     }
 
 
