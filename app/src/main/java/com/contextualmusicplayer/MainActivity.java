@@ -676,7 +676,8 @@ public class MainActivity extends AppCompatActivity implements
                     artist.setText(currentTrack.artistName + "(" + currentTrack.albumName + ")");
                     String albumCover = currentTrack.albumCoverWebUrl;
                     ImageView image = (ImageView) findViewById(R.id.mp3Image);
-                    Picasso.with(mCurrent).load(albumCover).resize(image.getWidth(), image.getHeight()).into(image);
+                    Picasso.with(mCurrent).load(albumCover).resize(image.getWidth(),
+                            image.getHeight()).into(image);
                     finalTime = currentTrack.durationMs;
                     seekBar = (SeekBar) findViewById(R.id.seekBar);
                     seekBar.setMax((int) finalTime);
@@ -925,7 +926,7 @@ public class MainActivity extends AppCompatActivity implements
                     previousPlaylist = currentUri;
                     currentUri = detectedRule.getPlaylistUri();
                     playListName.setText(detectedRule.getPlaylistName());
-                    mCommon.createToast(mCurrent, "Attempting to play playlist : ",Toast.LENGTH_SHORT);
+                    //mCommon.createToast(mCurrent, "Attempting to play playlist : ",Toast.LENGTH_SHORT);
                     playPauseToggle(currentUri,false,true);
                 }
             }
