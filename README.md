@@ -42,7 +42,7 @@ The application proposed to perform the following :
   * Open 'Add Rule' and create a custom rule. A simple one could be activity : still at your current location. Select a user       specific spotify playlist and save. The playlist will play if alll conditions are met. The fences take some time in           registration/de-registration and triggering as the API does it at the most optimized level of battery and CPU.
   * You can create and delete as many rules.
   * Overall the application has worked fine and was tested on a API level 23 phone (OnePlus 2) and it should work fine.           However UI may vary with other devices.
-* Please feel free to contact me in cases of issues with setup. Most features and self explanatory.
+* Please feel free to contact me in cases of issues with setup. Most features are self explanatory.
   
   
 
