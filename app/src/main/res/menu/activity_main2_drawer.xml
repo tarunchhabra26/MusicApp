@@ -10,6 +10,10 @@
             android:id="@+id/nav_add_rule"
             android:icon="@drawable/ic_playlist_add_black_24px"
             android:title="Add Rule" />
+        <item
+            android:id="@+id/weather_playlist"
+            android:icon="@android:drawable/ic_menu_compass"
+            android:title="Weather Playlist" />
     </group>
 
 </menu>

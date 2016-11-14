@@ -10,6 +10,7 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Bundle;
@@ -38,18 +39,22 @@ import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.contextualmusicplayer.com.contextualmusicplayer.model.Rule;
 import com.contextualmusicplayer.com.contextualmusicplayer.utils.CommonMethods;
 import com.google.android.gms.awareness.Awareness;
 import com.google.android.gms.awareness.fence.AwarenessFence;
 import com.google.android.gms.awareness.fence.DetectedActivityFence;
 import com.google.android.gms.awareness.fence.FenceState;
 import com.google.android.gms.awareness.fence.FenceUpdateRequest;
+import com.google.android.gms.awareness.fence.LocationFence;
 import com.google.android.gms.awareness.snapshot.DetectedActivityResult;
 import com.google.android.gms.awareness.snapshot.WeatherResult;
 import com.google.android.gms.awareness.state.Weather;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.common.api.ResultCallback;
 import com.google.android.gms.common.api.Status;
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 import com.spotify.sdk.android.authentication.AuthenticationClient;
 import com.spotify.sdk.android.authentication.AuthenticationRequest;
 import com.spotify.sdk.android.authentication.AuthenticationResponse;
@@ -65,7 +70,13 @@ import com.spotify.sdk.android.player.SpotifyPlayer;
 import com.squareup.picasso.Picasso;
 
 
+import java.lang.reflect.Type;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
 import kaaes.spotify.webapi.android.SpotifyApi;
@@ -74,6 +85,8 @@ import kaaes.spotify.webapi.android.SpotifyError;
 import kaaes.spotify.webapi.android.SpotifyService;
 import kaaes.spotify.webapi.android.models.Album;
 import kaaes.spotify.webapi.android.models.Pager;
+import kaaes.spotify.webapi.android.models.PlaylistSimple;
+import kaaes.spotify.webapi.android.models.PlaylistsPager;
 import kaaes.spotify.webapi.android.models.SavedTrack;
 import kaaes.spotify.webapi.android.models.Track;
 import retrofit.Callback;
@@ -81,11 +94,11 @@ import retrofit.RetrofitError;
 import retrofit.client.Response;
 
 public class MainActivity extends AppCompatActivity implements
-        SpotifyPlayer.NotificationCallback, ConnectionStateCallback,NavigationView.OnNavigationItemSelectedListener {
+        SpotifyPlayer.NotificationCallback, ConnectionStateCallback, NavigationView.OnNavigationItemSelectedListener {
 
     private MusicIntentReceiver myReceiver;
 
-    private final String defaultAlbum  = "spotify:album:1zHfDPtlXk2Biq8iVS1I3F";
+    private final String defaultAlbum = "spotify:user:starbucks:playlist:0LPsYH4hIRjLUKXuZd2vAt";
 
     // Awareness API Fence
 
@@ -102,6 +115,11 @@ public class MainActivity extends AppCompatActivity implements
             BuildConfig.APPLICATION_ID + "FENCE_RECEIVER_ACTION";
 
     private SeekBar seekBar;
+
+    private TextView playListName;
+
+    private String previousPlaylist;
+
     private long timeElapsed = 0L, finalTime = 0L;
 
 
@@ -125,8 +143,6 @@ public class MainActivity extends AppCompatActivity implements
 
     private SpotifyService mSpotifyService = null;
 
-    private List<SavedTrack> mDefaultTracks = null;
-
     private boolean isPlaying = false;
 
     private FloatingActionButton playPause = null;
@@ -142,6 +158,17 @@ public class MainActivity extends AppCompatActivity implements
     private TextView duration;
 
     private int forwardTime = 3000, rewindTime = 3000;
+
+    private String currentUri = null;
+
+    private boolean isHeadPhoneToggle = false;
+
+    private Weather weather;
+
+    private SharedPreferences mPrefs = null;
+    public static final String PREFS_NAME = "MyRules";
+    private List<Rule> ruleList = null;
+    private Map<String,AwarenessFence> allRuleFences = null;
 
 
     private Runnable updateSeekBarTime = new Runnable() {
@@ -213,14 +240,14 @@ public class MainActivity extends AppCompatActivity implements
                 != PackageManager.PERMISSION_GRANTED) {
             if (ActivityCompat.shouldShowRequestPermissionRationale(this,
                     Manifest.permission.ACCESS_FINE_LOCATION)) {
-                mCommon.showMessageOKCancel("You need to allow access to fine location",
-                        new DialogInterface.OnClickListener() {
-                            @Override
-                            public void onClick(DialogInterface dialog, int which) {
-                                requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
-                                        REQUEST_CODE_ASK_PERMISSIONS);
-                            }
-                        }, this);
+//                mCommon.showMessageOKCancel("You need to allow access to fine location",
+//                        new DialogInterface.OnClickListener() {
+//                            @Override
+//                            public void onClick(DialogInterface dialog, int which) {
+//                                requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
+//                                        REQUEST_CODE_ASK_PERMISSIONS);
+//                            }
+//                        }, this);
             } else {
                 ActivityCompat.requestPermissions(this,
                         new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
@@ -232,14 +259,14 @@ public class MainActivity extends AppCompatActivity implements
                 != PackageManager.PERMISSION_GRANTED) {
             if (ActivityCompat.shouldShowRequestPermissionRationale(this,
                     Manifest.permission.ACCESS_COARSE_LOCATION)) {
-                mCommon.showMessageOKCancel("You need to allow access to coarse location",
-                        new DialogInterface.OnClickListener() {
-                            @Override
-                            public void onClick(DialogInterface dialog, int which) {
-                                requestPermissions(new String[]{Manifest.permission.ACCESS_COARSE_LOCATION},
-                                        REQUEST_CODE_ASK_PERMISSIONS);
-                            }
-                        }, this);
+//                mCommon.showMessageOKCancel("You need to allow access to coarse location",
+//                        new DialogInterface.OnClickListener() {
+//                            @Override
+//                            public void onClick(DialogInterface dialog, int which) {
+//                                requestPermissions(new String[]{Manifest.permission.ACCESS_COARSE_LOCATION},
+//                                        REQUEST_CODE_ASK_PERMISSIONS);
+//                            }
+//                        }, this);
             } else {
                 ActivityCompat.requestPermissions(this,
                         new String[]{Manifest.permission.ACCESS_COARSE_LOCATION},
@@ -276,9 +303,9 @@ public class MainActivity extends AppCompatActivity implements
                 .build();
     }
 
-    public void next(View view){
-        if (mPlayer != null){
-            if (mPlayer.getPlaybackState().isActiveDevice){
+    public void next(View view) {
+        if (mPlayer != null) {
+            if (mPlayer.getPlaybackState().isActiveDevice) {
                 mPlayer.skipToNext(mOperationCallback);
             }
         }
@@ -286,39 +313,87 @@ public class MainActivity extends AppCompatActivity implements
 
     }
 
-    public void previous(View view){
-        if (mPlayer != null){
-            if (mPlayer.getPlaybackState().isActiveDevice){
+    public void previous(View view) {
+        if (mPlayer != null) {
+            if (mPlayer.getPlaybackState().isActiveDevice) {
                 mPlayer.skipToPrevious(mOperationCallback);
             }
         }
     }
+
     private void setupFences() {
         if (mCommon == null)
             mCommon = new CommonMethods();
-        AwarenessFence walkingFence = DetectedActivityFence.during(DetectedActivityFence.WALKING);
+        mPrefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        String rulesJson = mPrefs.getString("rules", null);
+        if (rulesJson != null) {
+            Gson gson = new Gson();
+            Type collectionType = new TypeToken<Collection<Rule>>() {
+            }.getType();
+            Collection<Rule> rules = gson.fromJson(rulesJson, collectionType);
+            ruleList = new ArrayList<Rule>(rules);
+        }
 
-        // Register the fence to receive callbacks.
-        Awareness.FenceApi.updateFences(
-                mApiClient,
-                new FenceUpdateRequest.Builder()
-                        .addFence(FENCE_KEY, walkingFence, mPendingIntent)
-                        .build())
-                .setResultCallback(new ResultCallback<Status>() {
-                    @Override
-                    public void onResult(@NonNull Status status) {
-                        if (status.isSuccess()) {
-                            mCommon.createToast(mCurrent,
-                                    "Fence was successfully registered", Toast.LENGTH_SHORT);
-                            Log.d(TAG, "Fence was successfully registered.");
-                        } else {
-                            mCommon.createToast(mCurrent,
-                                    "Fence could not be registered:", Toast.LENGTH_SHORT);
-                            Log.d(TAG, "Fence could not be registered: " + status);
-                        }
-                    }
-                });
+        allRuleFences = createFences(ruleList);
 
+        if (allRuleFences != null){
+            for (final String key : allRuleFences.keySet()){
+                Log.d(TAG,"About register fence for rule id : " + key);
+                Awareness.FenceApi.updateFences(
+                        mApiClient,
+                        new FenceUpdateRequest.Builder()
+                                .addFence(key, allRuleFences.get(key), mPendingIntent)
+                                .build())
+                        .setResultCallback(new ResultCallback<Status>() {
+                            @Override
+                            public void onResult(@NonNull Status status) {
+                                if (status.isSuccess()) {
+                                    Log.d(TAG, "Fence was successfully registered for key " + key);
+                                } else {
+                                    Log.d(TAG, "Fence could not be registered: " + status);
+                                }
+                            }
+                        });
+            }
+        }
+    }
+
+    private Map<String,AwarenessFence> createFences(List<Rule> ruleList) {
+        Map<String,AwarenessFence> fences = null;
+
+        if (ruleList == null) {
+            return fences;
+        }
+
+        fences = new LinkedHashMap<String,AwarenessFence>();
+
+        for (Rule rule : ruleList) {
+            AwarenessFence activityFence = null;
+            AwarenessFence geoFence = null;
+            AwarenessFence combinationFence = null;
+            if (rule.getActivityId() != DetectedActivityFence.UNKNOWN) {
+                activityFence = DetectedActivityFence.during(rule.getActivityId());
+            }
+            if (rule.getLatitude() != 0.0 || rule.getLongitude() != 0.0) {
+                if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                    initPermissions();
+                }
+                geoFence = LocationFence.in(rule.getLatitude(), rule.getLongitude(), rule.getRadius(), 0L);
+            }
+            if (activityFence != null && geoFence != null){
+                combinationFence = AwarenessFence.and(activityFence,geoFence);
+                fences.put(rule.getRuleId(),combinationFence);
+            } else if (activityFence != null && geoFence == null){
+                fences.put(rule.getRuleId(),activityFence);
+            } else if (activityFence == null && geoFence != null){
+                fences.put(rule.getRuleId(),geoFence);
+            }
+        }
+
+        if (fences.size() > 0)
+            return fences;
+        else
+            return null;
     }
 
 
@@ -344,36 +419,88 @@ public class MainActivity extends AppCompatActivity implements
     public void onPause() {
         IntentFilter filter = new IntentFilter(Intent.ACTION_HEADSET_PLUG);
         registerReceiver(myReceiver, filter);
-        // Unregister the fence:
-        Awareness.FenceApi.updateFences(
-                mApiClient,
-                new FenceUpdateRequest.Builder()
-                        .removeFence(FENCE_KEY)
-                        .build())
-                .setResultCallback(new ResultCallback<Status>() {
-                    @Override
-                    public void onResult(@NonNull Status status) {
-                        if (status.isSuccess()) {
-                            Log.i(TAG, "Fence was successfully unregistered.");
-                        } else {
-                            Log.e(TAG, "Fence could not be unregistered: " + status);
-                        }
-                    }
-                });
+        // Unregister the fences:
+        if(allRuleFences != null){
+            for (String key : allRuleFences.keySet()){
+                Awareness.FenceApi.updateFences(
+                        mApiClient,
+                        new FenceUpdateRequest.Builder()
+                                .removeFence(key)
+                                .build())
+                        .setResultCallback(new ResultCallback<Status>() {
+                            @Override
+                            public void onResult(@NonNull Status status) {
+                                if (status.isSuccess()) {
+                                    Log.i(TAG, "Fence was successfully unregistered.");
+                                } else {
+                                    Log.e(TAG, "Fence could not be unregistered: " + status);
+                                }
+                            }
+                        });
+            }
+        }
         super.onPause();
+
     }
 
     @Override
     public void onStart() {
         super.onStart();
-
-        getWeatherData();
-
         playPause = (FloatingActionButton) findViewById(R.id.media_play);
-        playPause.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if (isPlaying && mPlayer != null) {
+        playListName = (TextView) findViewById(R.id.playList);
+        getWeatherData();
+    }
+
+    private void getWeatherData() {
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            initPermissions();
+        }
+        Awareness.SnapshotApi.getWeather(mApiClient)
+                .setResultCallback(new ResultCallback<WeatherResult>() {
+                    @Override
+                    public void onResult(@NonNull WeatherResult weatherResult) {
+                        if (!weatherResult.getStatus().isSuccess()) {
+                            Log.e(TAG, "Could not get weather.");
+                            if (mCommon == null)
+                                mCommon = new CommonMethods();
+                            mCommon.createToast(mCurrent,"Weather information not available "
+                                    ,Toast.LENGTH_SHORT);
+                            return;
+                        }
+                        weather = weatherResult.getWeather();
+                        Log.d(TAG, "Weather: " + weather);
+                        if (mCommon == null)
+                            mCommon = new CommonMethods();
+                    }
+                });
+
+        }
+
+    private void playPauseToggle(String uri, boolean isToggle, boolean isReset){
+        if (isPlaying && mPlayer != null && isToggle == true) {
+            mPlayer.pause(mOperationCallback);
+            playPause.setImageDrawable(getResources().
+                    getDrawable(android.R.drawable.ic_media_play,
+                            MainActivity.this.getTheme()));
+            isPlaying = false;
+        } else {
+            PlaybackState playState = mPlayer.getPlaybackState();
+            if (playState.isActiveDevice && !playState.isPlaying) {
+                mPlayer.resume(mOperationCallback);
+            } else if (playState.isActiveDevice && isReset && currentUri != previousPlaylist){
+                mPlayer.playUri(mOperationCallback,uri,0,0);
+            } else if (currentUri != previousPlaylist){
+                mPlayer.playUri(mOperationCallback,uri,0,0);
+            }
+
+            playPause.setImageDrawable(getResources().
+                    getDrawable(android.R.drawable.ic_media_pause,
+                            MainActivity.this.getTheme()));
+            isPlaying = true;
+        }
+    }
+    private void playPauseToggle(String uri, boolean isToggle){
+                if (isPlaying && mPlayer != null && isToggle == true) {
                     mPlayer.pause(mOperationCallback);
                     playPause.setImageDrawable(getResources().
                             getDrawable(android.R.drawable.ic_media_play,
@@ -384,112 +511,22 @@ public class MainActivity extends AppCompatActivity implements
                     if (playState.isActiveDevice) {
                         mPlayer.resume(mOperationCallback);
                     } else {
-                        mSpotifyService.getMySavedTracks(new SpotifyCallback<Pager<SavedTrack>>() {
-                            @Override
-                            public void failure(SpotifyError spotifyError) {
-                                Log.d("Album failure", spotifyError.toString());
-                                mSpotifyService.getAlbum("4DOcG4A40Wf3q2vPNGQwQg",
-                                        new Callback<Album>() {
-                                            @Override
-                                            public void success(Album album, Response response) {
-                                                Log.d("Album success", album.name);
-                                                Log.d("Album release date", album.release_date);
-                                                Log.d("Album type", album.type);
-
-                                                mPlayer.playUri(null,
-                                                        defaultAlbum,
-                                                        0, 0);
-                                               /* String uri = "spotify:album:0K4pIOOsfJ9lK8OjrZfXzd";
-                                                Intent launcher = new Intent( Intent.ACTION_VIEW, Uri.parse(uri) );
-                                                startActivity(launcher);*/
-
-                                            }
-
-                                            @Override
-                                            public void failure(RetrofitError error) {
-                                                Log.d("Album failure", error.toString());
-                                            }
-                                        });
-                            }
-
-                            @Override
-                            public void success(Pager<SavedTrack> savedTrackPager,
-                                                Response response) {
-                                List<SavedTrack> tracks = savedTrackPager.items;
-                                int range = (tracks.size() - 0);
-                                int random = (int) (Math.random() * range) + 0;
-                                Track currentTrack = tracks.get(random).track;
-                                String uri = currentTrack.uri;
-                                Log.d("Current track uri: ", uri);
-                                tracks.remove(random);
-                                mDefaultTracks = tracks;
-                                mPlayer.setShuffle(mOperationCallback, true);
-                                mPlayer.playUri(mOperationCallback,
-                                        defaultAlbum, 0, 0);
-
-                                /*
-                                String uri2 = "spotify:user:filtrindia:playlist:4nNVfQ9eWidZXkBKZN5li4";
-                                Intent intent = new Intent(Intent.ACTION_VIEW);
-                                intent.setAction("android.media.action.MEDIA_PLAY_FROM_SEARCH");
-                                intent.setComponent(new ComponentName("com.spotify.music", "com.spotify.music.MainActivity"));
-                                intent.setData(Uri.parse(uri2));
-                                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                                if (intent.resolveActivity(getPackageManager()) != null) {
-                                    startActivity(intent);
-                                }
-
-                                Intent i = new Intent(Intent.ACTION_MEDIA_BUTTON);
-                                i.setComponent(new ComponentName("com.spotify.music", "com.spotify.music.internal.receiver.MediaButtonReceiver"));
-                                i.putExtra(Intent.EXTRA_KEY_EVENT,new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_MEDIA_PLAY));
-                                sendOrderedBroadcast(i, null);
-
-                                i = new Intent(Intent.ACTION_MEDIA_BUTTON);
-                                i.setComponent(new ComponentName("com.spotify.music", "com.spotify.music.internal.receiver.MediaButtonReceiver"));
-                                i.putExtra(Intent.EXTRA_KEY_EVENT,new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_MEDIA_PLAY));
-                                sendOrderedBroadcast(i, null);
-                                */
-
-                            }
-                        });
+                        mPlayer.playUri(mOperationCallback,uri,0,0);
                     }
+
                     playPause.setImageDrawable(getResources().
                             getDrawable(android.R.drawable.ic_media_pause,
                                     MainActivity.this.getTheme()));
                     isPlaying = true;
                 }
-            }
-        });
     }
 
-    private void getWeatherData() {
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            // TODO: Consider calling
-            //    ActivityCompat#requestPermissions
-            // here to request the missing permissions, and then overriding
-            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-            //                                          int[] grantResults)
-            // to handle the case where the user grants the permission. See the documentation
-            // for ActivityCompat#requestPermissions for more details.
-            return;
+    public void playPauseToggleHandler(View view){
+        if (currentUri == null){
+            currentUri = defaultAlbum;
         }
-        Awareness.SnapshotApi.getWeather(mApiClient)
-                .setResultCallback(new ResultCallback<WeatherResult>() {
-                    @Override
-                    public void onResult(@NonNull WeatherResult weatherResult) {
-                        if (!weatherResult.getStatus().isSuccess()) {
-                            Log.e(TAG, "Could not get weather.");
-                            return;
-                        }
-                        Weather weather = weatherResult.getWeather();
-                        Log.d(TAG, "Weather: " + weather);
-                        if (mCommon == null)
-                            mCommon = new CommonMethods();
-                        mCommon.createToast(mCurrent,"Weather : " + weather,Toast.LENGTH_SHORT);
-                        weather.getConditions();
-                    }
-                });
-
-        }
+        playPauseToggle(currentUri, true);
+    }
 
     public void forward(View view){
         if (mPlayer != null){
@@ -547,9 +584,29 @@ public class MainActivity extends AppCompatActivity implements
 
     @Override
     protected void onStop(){
-        super.onStop();
         IntentFilter filter = new IntentFilter(Intent.ACTION_HEADSET_PLUG);
         registerReceiver(myReceiver, filter);
+        // Unregister the fences:
+        if(allRuleFences != null){
+            for (String key : allRuleFences.keySet()){
+                Awareness.FenceApi.updateFences(
+                        mApiClient,
+                        new FenceUpdateRequest.Builder()
+                                .removeFence(key)
+                                .build())
+                        .setResultCallback(new ResultCallback<Status>() {
+                            @Override
+                            public void onResult(@NonNull Status status) {
+                                if (status.isSuccess()) {
+                                    Log.i(TAG, "Fence was successfully unregistered.");
+                                } else {
+                                    Log.e(TAG, "Fence could not be unregistered: " + status);
+                                }
+                            }
+                        });
+            }
+        }
+        super.onStop();
 
     }
 
@@ -557,62 +614,93 @@ public class MainActivity extends AppCompatActivity implements
     protected void onDestroy() {
         Spotify.destroyPlayer(this);
         unregisterReceiver(myReceiver);
+        // Unregister the fences:
+        if(allRuleFences != null){
+            for (String key : allRuleFences.keySet()){
+                Awareness.FenceApi.updateFences(
+                        mApiClient,
+                        new FenceUpdateRequest.Builder()
+                                .removeFence(key)
+                                .build())
+                        .setResultCallback(new ResultCallback<Status>() {
+                            @Override
+                            public void onResult(@NonNull Status status) {
+                                if (status.isSuccess()) {
+                                    Log.i(TAG, "Fence was successfully unregistered.");
+                                } else {
+                                    Log.e(TAG, "Fence could not be unregistered: " + status);
+                                }
+                            }
+                        });
+            }
+        }
         super.onDestroy();
     }
 
     @Override
     public void onPlaybackEvent(PlayerEvent playerEvent) {
         Log.d("MainActivity", "Playback event received: " + playerEvent.name());
-        switch (playerEvent) {
-            // Handle event type as necessary
-            case kSpPlaybackNotifyPlay:
-                if (mCommon == null)
-                    mCommon = new CommonMethods();
+        if (mPlayer != null) {
+            switch (playerEvent) {
+                // Handle event type as necessary
+                case kSpPlaybackNotifyPlay:
+                    if (mCommon == null)
+                        mCommon = new CommonMethods();
+                    //mCommon.createToast(mCurrent, "Music playing", Toast.LENGTH_SHORT);
+                    Metadata data = mPlayer.getMetadata();
+                    Metadata.Track currentTrack = data.currentTrack;
+                    TextView songName = (TextView) findViewById(R.id.songName);
+                    if (currentTrack != null) {
+                    songName.setText(currentTrack.name);
+                        TextView artist = (TextView) findViewById(R.id.songArtist);
+                        artist.setText(currentTrack.artistName + "(" + currentTrack.albumName + ")");
+                        String albumCover = currentTrack.albumCoverWebUrl;
+                        ImageView image = (ImageView) findViewById(R.id.mp3Image);
+                        Picasso.with(mCurrent).load(albumCover).resize(image.getWidth(), image.getHeight()).into(image);
+                        finalTime = currentTrack.durationMs;
+                        seekBar = (SeekBar) findViewById(R.id.seekBar);
+                        seekBar.setMax((int) finalTime);
+                        seekBar.setClickable(false);
+                    }
+                    if (currentUri == defaultAlbum)
+                        playListName.setText("Default");
+                    durationHandler.postDelayed(updateSeekBarTime, 100);
+                    break;
 
-                mCommon.createToast(mCurrent, "Music playing", Toast.LENGTH_SHORT);
-                SavedTrack track = mDefaultTracks.get(0);
-                mDefaultTracks.remove(0);
-                Log.d("Next track :", track.track.name);
-                mPlayer.queue(mOperationCallback, track.track.uri);
-                isPlaying = true;
-                playPause.setImageDrawable(getResources().
-                        getDrawable(android.R.drawable.ic_media_pause,
-                                MainActivity.this.getTheme()));
-                Metadata data = mPlayer.getMetadata();
-                Metadata.Track currentTrack = data.currentTrack;
-                TextView songName = (TextView) findViewById(R.id.songName);
-                songName.setText(currentTrack.name);
-                TextView artist = (TextView) findViewById(R.id.songArtist);
-                artist.setText(currentTrack.artistName + "(" + currentTrack.albumName + ")");
-                String albumCover = currentTrack.albumCoverWebUrl;
-                ImageView image = (ImageView) findViewById(R.id.mp3Image);
-                Picasso.with(mCurrent).load(albumCover).resize(image.getWidth(),image.getHeight()).into(image);
-                finalTime = currentTrack.durationMs;
-                seekBar = (SeekBar) findViewById(R.id.seekBar);
-                seekBar.setMax((int) finalTime);
-                seekBar.setClickable(true);
-                durationHandler.postDelayed(updateSeekBarTime, 100);
-                break;
+                case kSpPlaybackNotifyTrackChanged:
+                    data = mPlayer.getMetadata();
+                    currentTrack = data.currentTrack;
+                    songName = (TextView) findViewById(R.id.songName);
+                    songName.setText(currentTrack.name);
+                    TextView artist = (TextView) findViewById(R.id.songArtist);
+                    artist.setText(currentTrack.artistName + "(" + currentTrack.albumName + ")");
+                    String albumCover = currentTrack.albumCoverWebUrl;
+                    ImageView image = (ImageView) findViewById(R.id.mp3Image);
+                    Picasso.with(mCurrent).load(albumCover).resize(image.getWidth(), image.getHeight()).into(image);
+                    finalTime = currentTrack.durationMs;
+                    seekBar = (SeekBar) findViewById(R.id.seekBar);
+                    seekBar.setMax((int) finalTime);
+                    seekBar.setClickable(false);
+                    durationHandler.postDelayed(updateSeekBarTime, 100);
+                    break;
 
-            case kSpPlaybackNotifyTrackChanged:
-                data = mPlayer.getMetadata();
-                currentTrack = data.currentTrack;
-                songName = (TextView) findViewById(R.id.songName);
-                songName.setText(currentTrack.name);
-                artist = (TextView) findViewById(R.id.songArtist);
-                artist.setText(currentTrack.artistName + "(" + currentTrack.albumName + ")");
-                albumCover = currentTrack.albumCoverWebUrl;
-                image = (ImageView) findViewById(R.id.mp3Image);
-                Picasso.with(mCurrent).load(albumCover).resize(image.getWidth(),image.getHeight()).into(image);
-                finalTime = currentTrack.durationMs;
-                seekBar = (SeekBar) findViewById(R.id.seekBar);
-                seekBar.setMax((int) finalTime);
-                seekBar.setClickable(false);
-                durationHandler.postDelayed(updateSeekBarTime, 100);
-                break;
+                case kSpPlaybackNotifyNext:
+                    playPause.setImageDrawable(getResources().
+                            getDrawable(android.R.drawable.ic_media_pause,
+                                    MainActivity.this.getTheme()));
+                    isPlaying = true;
+                    break;
 
-            default:
-                break;
+                case kSpPlaybackNotifyPrev:
+                    playPause.setImageDrawable(getResources().
+                            getDrawable(android.R.drawable.ic_media_pause,
+                                    MainActivity.this.getTheme()));
+                    isPlaying = true;
+                    break;
+
+                default:
+                    break;
+            }
         }
     }
 
@@ -698,6 +786,40 @@ public class MainActivity extends AppCompatActivity implements
         } else if (id == R.id.nav_add_rule) {
             // Handle to create a new rule
             createRuleIntent();
+        } else if (id == R.id.weather_playlist){
+            // Get weather and play the playlist
+            getWeatherData();
+            mCommon.createToast(mCurrent,"Weather based playlist ",Toast.LENGTH_SHORT);
+            if (null != weather) {
+                String strWeather = mCommon.getWeatherCondition(weather);
+                mSpotifyService.searchPlaylists(strWeather, new Callback<PlaylistsPager>() {
+                    @Override
+                    public void success(PlaylistsPager playlistsPager, Response response) {
+                        List<PlaylistSimple> playlists =
+                                new ArrayList<PlaylistSimple>(playlistsPager
+                                        .playlists.items);
+                        if (playlists.size() > 0) {
+                            PlaylistSimple playlist = playlists
+                                    .get(new Random().nextInt(playlists.size()));
+                            currentUri = playlist.uri;
+                            if (mPlayer != null) {
+                                playPauseToggle(currentUri, false, true);
+                                playListName.setText(playlist.name);
+                            }
+                        }
+                    }
+
+                    @Override
+                    public void failure(RetrofitError error) {
+                        if (mCommon == null)
+                            mCommon = new CommonMethods();
+                        mCommon.createToast(mCurrent, "No weather data, playing default ", Toast.LENGTH_SHORT);
+                        if (mPlayer != null) {
+                            playPauseToggle(defaultAlbum, false, true);
+                        }
+                    }
+                });
+            }
         }
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
         drawer.closeDrawer(GravityCompat.START);
@@ -725,67 +847,25 @@ public class MainActivity extends AppCompatActivity implements
                 switch (state) {
                     case 0:
                         Log.d("Context", "Headset is unplugged");
-                        valHPStatus.setText("Headphones : Unplugged, please plugin to start");
-                        if (mPlayer != null)
-                            mPlayer.pause(mOperationCallback);
-                            playPause.setImageDrawable(getResources().
-                                getDrawable(android.R.drawable.ic_media_play,
-                                        MainActivity.this.getTheme()));
-                            isPlaying = false;
+                        valHPStatus.setText("Headphones : Unplugged");
+                        if (mPlayer != null){
+                            PlaybackState pbState = mPlayer.getPlaybackState();
+                            if (pbState != null && pbState.isPlaying && isHeadPhoneToggle) {
+                                if (currentUri == null)
+                                    currentUri = defaultAlbum;
+                                playPauseToggle(currentUri, true);
+                                isHeadPhoneToggle = false;
+                            }
+                        }
                         break;
                     case 1:
                         Log.d("Context", "Headphones :Plugged in");
-                        valHPStatus.setText("Plugged");
+                        valHPStatus.setText("Headphones : Plugged");
                         if (mPlayer != null) {
-                            PlaybackState pState = mPlayer.getPlaybackState();
-                            if (pState.isActiveDevice)
-                                mPlayer.resume(mOperationCallback);
-                            else {
-                                mSpotifyService.getMySavedTracks(new SpotifyCallback<Pager<SavedTrack>>() {
-                                    @Override
-                                    public void failure(SpotifyError spotifyError) {
-                                        Log.d("Album failure", spotifyError.toString());
-                                        mSpotifyService.getAlbum("4DOcG4A40Wf3q2vPNGQwQg",
-                                                new Callback<Album>() {
-                                            @Override
-                                            public void success(Album album, Response response) {
-                                                Log.d("Album success", album.name);
-                                                Log.d("Album release date", album.release_date);
-                                                Log.d("Album type", album.type);
-
-                                                mPlayer.playUri(null,
-                                                        defaultAlbum,
-                                                        0, 0);
-                                            }
-
-                                            @Override
-                                            public void failure(RetrofitError error) {
-                                                Log.d("Album failure", error.toString());
-                                            }
-                                        });
-                                    }
-
-                                    @Override
-                                    public void success(Pager<SavedTrack> savedTrackPager,
-                                                        Response response) {
-                                        List<SavedTrack> tracks = savedTrackPager.items;
-                                        int range = (tracks.size() - 0);
-                                        int random = (int) (Math.random() * range) + 0;
-                                        Track currentTrack = tracks.get(random).track;
-                                        String uri = currentTrack.uri;
-                                        Log.d("Current track uri: ", uri);
-                                        tracks.remove(random);
-                                        mDefaultTracks = tracks;
-                                        mPlayer.setShuffle(mOperationCallback, true);
-                                        mPlayer.playUri(mOperationCallback,
-                                                defaultAlbum, 0, 0);
-                                    }
-                                });
-                            }
-                            playPause.setImageDrawable(getResources().
-                                    getDrawable(android.R.drawable.ic_media_pause,
-                                            MainActivity.this.getTheme()));
-                            isPlaying = true;
+                            if (currentUri == null)
+                                currentUri = defaultAlbum;
+                            playPauseToggle(currentUri, false);
+                            isHeadPhoneToggle = true;
                         }
                         break;
                     default:
@@ -812,11 +892,16 @@ public class MainActivity extends AppCompatActivity implements
 
             // The state information for the given fence is
             FenceState fenceState = FenceState.extract(intent);
-            if (TextUtils.equals(fenceState.getFenceKey(), FENCE_KEY)) {
-                String fenceStateStr;
+            String fenceStateStr = null;
+            String fenceKey = null;
+            if (allRuleFences != null && allRuleFences.containsKey(fenceState.getFenceKey())) {
                 switch (fenceState.getCurrentState()) {
                     case FenceState.TRUE:
                         fenceStateStr = "true";
+                        fenceKey = fenceState.getFenceKey();
+                        mCommon.createToast(mCurrent,
+                                "Fence state:" + fenceStateStr + " for fenceKey : " + fenceKey,
+                                Toast.LENGTH_SHORT);
                         break;
                     case FenceState.FALSE:
                         fenceStateStr = "false";
@@ -827,13 +912,25 @@ public class MainActivity extends AppCompatActivity implements
                     default:
                         fenceStateStr = "unknown value";
                 }
-                mCommon.createToast(mCurrent,
-                        "Fence state:" + fenceStateStr,
-                        Toast.LENGTH_SHORT);
-
+            }
+            if (fenceKey != null && ruleList != null){
+                Rule detectedRule = null;
+                    for (Rule rule : ruleList){
+                        if (rule.getRuleId().equals(fenceKey)){
+                            detectedRule = rule;
+                            break;
+                        }
+                    }
+                if (detectedRule != null && mPlayer != null){
+                    previousPlaylist = currentUri;
+                    currentUri = detectedRule.getPlaylistUri();
+                    playListName.setText(detectedRule.getPlaylistName());
+                    mCommon.createToast(mCurrent, "Attempting to play playlist : ",Toast.LENGTH_SHORT);
+                    playPauseToggle(currentUri,false,true);
+                }
             }
         }
 
 
-        }
     }
+}

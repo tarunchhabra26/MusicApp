@@ -50,10 +50,10 @@ public class CommonMethods {
         String condition = "Unknown";
         switch (weather.getConditions()[0]){
             case Weather.CONDITION_CLEAR :
-                condition = "Clear Sky";
+                condition = "Clear+Sky";
                 break;
             case Weather.CONDITION_CLOUDY:
-                condition = "Cloudy Sky";
+                condition = "Cloudy";
                 break;
             case Weather.CONDITION_FOGGY:
                 condition = "Foggy";

@@ -84,7 +84,7 @@
             android:id="@+id/media_rewind"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginLeft="14dp"
+            android:layout_marginLeft="10dp"
             android:onClick="rewind"
             android:src="@android:drawable/ic_media_rew"
             />
@@ -92,7 +92,7 @@
             android:id="@+id/media_prev"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginLeft="14dp"
+            android:layout_marginLeft="10dp"
             android:onClick="previous"
             android:src="@android:drawable/ic_media_previous"
             />
@@ -101,14 +101,15 @@
             android:id="@+id/media_play"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginLeft="14dp"
+            android:layout_marginLeft="10dp"
+            android:onClick="playPauseToggleHandler"
             android:src="@android:drawable/ic_media_play"
              />
         <android.support.design.widget.FloatingActionButton
             android:id="@+id/media_next"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginLeft="14dp"
+            android:layout_marginLeft="10dp"
             android:onClick="next"
             android:src="@android:drawable/ic_media_next" />
 
@@ -116,11 +117,11 @@
             android:id="@+id/media_forward"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginLeft="14dp"
+            android:layout_marginLeft="10dp"
             android:onClick="forward"
             android:src="@android:drawable/ic_media_ff"
             />
         </LinearLayout>
 
 
-    </LinearLayout>
+</LinearLayout>

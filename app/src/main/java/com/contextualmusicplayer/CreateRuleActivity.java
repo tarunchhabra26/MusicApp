@@ -71,8 +71,8 @@ public class CreateRuleActivity extends AppCompatActivity implements GoogleApiCl
     private final String TAG = getClass().getSimpleName();
     private SecureRandom random = new SecureRandom();
     private String placeName;
-    private double latitude;
-    private double longitude;
+    private double latitude = 0.0;
+    private double longitude = 0.0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -87,7 +87,6 @@ public class CreateRuleActivity extends AppCompatActivity implements GoogleApiCl
         // Setting SpotifyService instance
         mSpotifyService = mSpotifyApi.getService();
         spinnerArray = new ArrayList<String>();
-        spinnerArray.add("Choose a playlist");
 
         mSpotifyService.getMyPlaylists(new Callback<Pager<PlaylistSimple>>() {
             @Override
@@ -119,6 +118,7 @@ public class CreateRuleActivity extends AppCompatActivity implements GoogleApiCl
 
         Spinner playlistSpinner = (Spinner)findViewById(R.id.SpinnerPlaylist);
         ArrayAdapter<String> spinnerArrayAdapter = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_dropdown_item, spinnerArray);
+        spinnerArrayAdapter.add("Choose a playlist");
         playlistSpinner.setAdapter(spinnerArrayAdapter);
         mPrefs = getSharedPreferences(PREFS_NAME,MODE_PRIVATE);
 
@@ -150,15 +150,28 @@ public class CreateRuleActivity extends AppCompatActivity implements GoogleApiCl
 
     public void saveRule(View view){
         String rulesJson = null;
+        boolean isValid = true;
         EditText ruleName = (EditText)findViewById(R.id.RuleTextName);
         String strRuleName = ruleName.getText().toString();
+        if (strRuleName == null || strRuleName.isEmpty()) {
+            ruleName.setError("Please enter a rule name");
+            isValid = false;
+        }
         Spinner activityName = (Spinner)findViewById(R.id.SpinnerActivityType);
         String strActivityName = activityName.getSelectedItem().toString();
         CommonMethods methods = new CommonMethods();
         EditText radius = (EditText)findViewById(R.id.RadiusText);
-        long lRadius = Long.parseLong(radius.getText().toString());
+        String strRadius = radius.getText().toString();
+        if (strRadius == null || strRadius.isEmpty()){
+            strRadius = "0";
+        }
+        long lRadius = Long.parseLong(strRadius);
         Spinner playlistName = (Spinner)findViewById(R.id.SpinnerPlaylist);
         String strPlaylistName = playlistName.getSelectedItem().toString();
+        if (strPlaylistName.equalsIgnoreCase("Choose a playlist")){
+            isValid = false;
+            methods.createToast(this, "Please choose atlease one playlist",Toast.LENGTH_SHORT);
+        }
         String playlistUri = null;
         if (null != strPlaylistName){
             for (PlaylistSimple playlist : playlists){
@@ -184,12 +197,14 @@ public class CreateRuleActivity extends AppCompatActivity implements GoogleApiCl
                 String json = gson.toJson(rulesList);
                 SharedPreferences.Editor editor = mPrefs.edit();
                 editor.putString("rules",json);
-                editor.commit();
-                methods.createToast(this, "Rule id : " +  rule.getRuleId() + " rule name :"
-                        + rule.getRulename() + " created", Toast.LENGTH_SHORT);
+                if (isValid) {
+                    editor.commit();
+                    methods.createToast(this, "Rule id : " + rule.getRuleId() + " rule name :"
+                            + rule.getRulename() + " created", Toast.LENGTH_SHORT);
+                }
             } else {
                 // entry exists
-                methods.createToast(this, "Rules json : " + rulesJson.toString(), Toast.LENGTH_SHORT);
+                //methods.createToast(this, "Rules json : " + rulesJson.toString(), Toast.LENGTH_SHORT);
                 Log.d(TAG, "Json : " + rulesJson);
                 Gson gson = new Gson();
                 Type collectionType = new TypeToken<Collection<Rule>>(){}.getType();
@@ -203,10 +218,15 @@ public class CreateRuleActivity extends AppCompatActivity implements GoogleApiCl
                 String json = gson.toJson(rules);
                 SharedPreferences.Editor editor = mPrefs.edit();
                 editor.putString("rules",json);
-                editor.commit();
-                methods.createToast(this, "Rule id : " +  rule.getRuleId() + " rule name :"
-                        + rule.getRulename() + " created", Toast.LENGTH_SHORT);
+                if (isValid) {
+                    editor.commit();
+                    methods.createToast(this, "Rule id : " + rule.getRuleId() + " rule name :"
+                            + rule.getRulename() + " created", Toast.LENGTH_SHORT);
+                }
 
+            }
+            if (isValid) {
+                finish();
             }
         }
 

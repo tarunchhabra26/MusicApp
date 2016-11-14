@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string-array name="activitytypelist">
-        <item>@string/activitytype100</item>
         <item>@string/activitytype0</item>
         <item>@string/activitytype1</item>
         <item>@string/activitytype2</item>

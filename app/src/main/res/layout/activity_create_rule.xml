@@ -75,12 +75,14 @@
                 android:id="@+id/RadiusText"
                 android:layout_height="wrap_content"
                 android:hint="@string/georadius"
+                android:paddingTop="10dp"
                 android:inputType="numberSigned"
                 android:layout_width="fill_parent">
             </EditText>
             <Spinner
                 android:id="@+id/SpinnerPlaylist"
                 android:layout_height="wrap_content"
+                android:paddingTop="10dp"
                 android:prompt="@string/playlistspinner"
                 android:layout_width="fill_parent">
             </Spinner>
