@@ -41,14 +41,18 @@ public class CommonMethods {
                 .show();
     }
 
+    public String getWeatherCondition(Weather weather){
+        return getWeatherCondition(weather.getConditions()[0]);
+    }
+
     /**
      * Gets the weather condition for a given instance of weather
      * @param weather - Weather instance of awareness API
      * @return Weather is a string format, which can be used for searching
      */
-    public String getWeatherCondition(Weather weather){
+    public String getWeatherCondition(int weather){
         String condition = "Unknown";
-        switch (weather.getConditions()[0]){
+        switch (weather){
             case Weather.CONDITION_CLEAR :
                 condition = "Clear+Sky";
                 break;

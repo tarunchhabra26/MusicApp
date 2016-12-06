@@ -1,26 +1,23 @@
 package com.contextualmusicplayer;
 
 import android.Manifest;
-import android.app.Activity;
 import android.app.PendingIntent;
-import android.app.SearchManager;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
-import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
-import android.provider.MediaStore;
+import android.os.IBinder;
+import android.os.RemoteException;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.NavigationView;
-import android.support.design.widget.Snackbar;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v4.view.GravityCompat;
@@ -30,7 +27,6 @@ import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.text.TextUtils;
 import android.util.Log;
-import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -47,7 +43,6 @@ import com.google.android.gms.awareness.fence.DetectedActivityFence;
 import com.google.android.gms.awareness.fence.FenceState;
 import com.google.android.gms.awareness.fence.FenceUpdateRequest;
 import com.google.android.gms.awareness.fence.LocationFence;
-import com.google.android.gms.awareness.snapshot.DetectedActivityResult;
 import com.google.android.gms.awareness.snapshot.WeatherResult;
 import com.google.android.gms.awareness.state.Weather;
 import com.google.android.gms.common.api.GoogleApiClient;
@@ -69,7 +64,6 @@ import com.spotify.sdk.android.player.Spotify;
 import com.spotify.sdk.android.player.SpotifyPlayer;
 import com.squareup.picasso.Picasso;
 
-
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -79,22 +73,24 @@ import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
+import csc750.tarun.com.adroitmiddleware.IAdroitCallback;
 import kaaes.spotify.webapi.android.SpotifyApi;
-import kaaes.spotify.webapi.android.SpotifyCallback;
-import kaaes.spotify.webapi.android.SpotifyError;
 import kaaes.spotify.webapi.android.SpotifyService;
-import kaaes.spotify.webapi.android.models.Album;
-import kaaes.spotify.webapi.android.models.Pager;
 import kaaes.spotify.webapi.android.models.PlaylistSimple;
 import kaaes.spotify.webapi.android.models.PlaylistsPager;
-import kaaes.spotify.webapi.android.models.SavedTrack;
-import kaaes.spotify.webapi.android.models.Track;
 import retrofit.Callback;
 import retrofit.RetrofitError;
 import retrofit.client.Response;
 
+import csc750.tarun.com.adroitmiddleware.IAdroitInterface;
+
 public class MainActivity extends AppCompatActivity implements
         SpotifyPlayer.NotificationCallback, ConnectionStateCallback, NavigationView.OnNavigationItemSelectedListener {
+
+    protected IAdroitInterface contextService;
+    private IAdroitCallback.Stub mAdroitCallback;
+    private boolean mAdroidServiceIsBound;
+    protected ServiceConnection adroitServiceConnection;
 
     private MusicIntentReceiver myReceiver;
 
@@ -165,6 +161,8 @@ public class MainActivity extends AppCompatActivity implements
 
     private Weather weather;
 
+    private int intWeatherCondition;
+
     private SharedPreferences mPrefs = null;
     public static final String PREFS_NAME = "MyRules";
     private List<Rule> ruleList = null;
@@ -190,6 +188,53 @@ public class MainActivity extends AppCompatActivity implements
 
         }
     };
+
+    void initConnection(){
+        mAdroitCallback = new IAdroitCallback.Stub(){
+            @Override
+            public void weatherUpdate(int weatherCondition) throws RemoteException {
+                intWeatherCondition = weatherCondition;
+                Log.d("Weather update", weatherCondition + "");
+
+            }
+
+            @Override
+            public void locationUpdateCallback(String latitude, String longitude) throws RemoteException {
+                //Do nothing
+            }
+        };
+
+        adroitServiceConnection = new ServiceConnection() {
+            @Override
+            public void onServiceConnected(ComponentName componentName, IBinder service) {
+                contextService = IAdroitInterface.Stub.asInterface(service);
+                if (mCommon == null)
+                    mCommon = new CommonMethods();
+                mCommon.createToast(mCurrent,"Adroid Middleware Connected", Toast.LENGTH_SHORT);
+            }
+
+            @Override
+            public void onServiceDisconnected(ComponentName componentName) {
+                contextService = null;
+                if (mCommon == null)
+                    mCommon = new CommonMethods();
+                mCommon.createToast(mCurrent,"Adroid Middleware Disconnected", Toast.LENGTH_SHORT);
+
+            }
+        };
+
+        if (contextService == null){
+            Intent contextIntent = new Intent();
+            contextIntent.setPackage("csc750.tarun.com.adroitmiddleware");
+            contextIntent.setAction("service.contextFinder");
+            startService(contextIntent);
+            bindService(contextIntent, adroitServiceConnection, Context.BIND_AUTO_CREATE);
+            mAdroidServiceIsBound = true;
+            if(contextService==null)
+                Log.d("locService","NULL");
+        }
+
+    }
 
     private final Player.OperationCallback mOperationCallback = new Player.OperationCallback() {
         @Override
@@ -228,6 +273,9 @@ public class MainActivity extends AppCompatActivity implements
 
         // Initialize Awareness API
         initAwarenessAPI();
+
+        // init middleware service
+        initConnection();
 
     }
 
@@ -634,6 +682,8 @@ public class MainActivity extends AppCompatActivity implements
                         });
             }
         }
+        if(adroitServiceConnection != null)
+            unbindService(adroitServiceConnection);
         super.onDestroy();
     }
 
@@ -791,6 +841,19 @@ public class MainActivity extends AppCompatActivity implements
             // Get weather and play the playlist
             getWeatherData();
             mCommon.createToast(mCurrent,"Weather based playlist ",Toast.LENGTH_SHORT);
+            try {
+                if (mAdroidServiceIsBound) {
+                    contextService.registerForWeatherUpdate(mAdroitCallback);
+                }
+            } catch(RemoteException e){
+                e.printStackTrace();
+            }
+
+            if (intWeatherCondition != 0){
+                String strWeather = mCommon.getWeatherCondition(intWeatherCondition);
+                mCommon.createToast(mCurrent,"Weather condition : "  + strWeather,Toast.LENGTH_SHORT);
+
+            }
             if (null != weather) {
                 String strWeather = mCommon.getWeatherCondition(weather);
                 mSpotifyService.searchPlaylists(strWeather, new Callback<PlaylistsPager>() {
