@@ -11,6 +11,8 @@ The application proposed to perform the following :
 
 * Using set of sensor's(location,state and orientation) the application should be able to play a collection of songs based on the current activity of the user. For e.g if the application detects that the user is running and has headphones plugged in then it should start the appropriate music playlist.
 
+* A new context middleware i.e Adroit mmiddle ware has been added to compute context data which requires polling certain sensors. The middleware runs as a separate service.
+
 ## Following information is required to compute user's context ##
 * Location
 * Activity
@@ -31,6 +33,7 @@ The application proposed to perform the following :
 
 ## How to run the program ##
 * Pre-requisite - Have a phone which is compatible with Android API level 23 or above(as per specification), Android Studio, Spotify premium account.
+* Lanch the adroit middleware first.
 * Launch the app in the phone using ADB.
 * Application name will appear as 'Adroit'. Which means "clever or skilful" given it is context aware and adaptable.
 * At the very start the app will ask the user to login into spotify premium account to start streaming music.
@@ -38,7 +41,7 @@ The application proposed to perform the following :
 * The application is fully integrated with Google Fence and Snapshot API to compute context.
 * Following tests can be performed -
   * Playback based on headphone jack plugin and plug-out.
-  * Open the app drawer and select 'Weather Playlist'. It will search and play a playlist which has songs which are as per the      weather condition or have similar keywords.
+  * Open the app drawer and select 'Weather Playlist'. It will search and play a playlist which has songs which are as per    the weather condition or have similar keywords.
   * Open 'Add Rule' and create a custom rule. A simple one could be activity : still at your current location. Select a user       specific spotify playlist and save. The playlist will play if alll conditions are met. The fences take some time in           registration/de-registration and triggering as the API does it at the most optimized level of battery and CPU.
   * You can create and delete as many rules.
   * Overall the application has worked fine and was tested on a API level 23 phone (OnePlus 2) and it should work fine.           However UI may vary with other devices.
