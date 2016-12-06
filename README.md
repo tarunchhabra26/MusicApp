@@ -13,6 +13,10 @@ The application proposed to perform the following :
 
 * A new context middleware i.e Adroit mmiddle ware has been added to compute context data which requires polling certain sensors. The middleware runs as a separate service.
 
+## Feature separation
+* Polling based context computaions such as location, headphone and weather are done using middleware.
+* Fence or push based context computations are done in the foreground application. Fence based approach is highly optimized and uses minimal battery and runs on a generic rule engine. Hence AIDL based polling approach wouldn't have been worth the change.
+
 ## Following information is required to compute user's context ##
 * Location
 * Activity
@@ -35,6 +39,7 @@ The application proposed to perform the following :
 * Pre-requisite - Have a phone which is compatible with Android API level 23 or above(as per specification), Android Studio, Spotify premium account.
 * Lanch the adroit middleware first.
 * Launch the app in the phone using ADB.
+* Applicaiton will show a Toast confirming that the middleware is connected.
 * Application name will appear as 'Adroit'. Which means "clever or skilful" given it is context aware and adaptable.
 * At the very start the app will ask the user to login into spotify premium account to start streaming music.
 * Once done with that the app can start streaming after plugging headphone or using the play/pause toggle switch.
